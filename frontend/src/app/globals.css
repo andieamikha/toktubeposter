@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #fe2c55;
+  --color-primary-dark: #e5254d;
+  --color-secondary: #25f4ee;
+  --color-accent: #161823;
+  --color-sidebar: #0f0f14;
+  --color-card: #1e1e2e;
+  --color-card-hover: #2a2a3e;
+  --color-surface: #13131d;
+  --color-border: #2e2e42;
+  --color-muted: #8e8ea0;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+}
+
+body {
+  @apply bg-surface text-white antialiased;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/* Custom utilities */
+.btn-primary {
+  @apply bg-primary hover:bg-primary-dark text-white font-medium px-4 py-2 rounded-lg transition-colors;
+}
+.btn-secondary {
+  @apply bg-card hover:bg-card-hover text-white font-medium px-4 py-2 rounded-lg border border-border transition-colors;
+}
+.btn-danger {
+  @apply bg-danger hover:bg-red-600 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+}
+.btn-success {
+  @apply bg-success hover:bg-green-600 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+}
+.input-field {
+  @apply w-full bg-card border border-border rounded-lg px-3 py-2 text-white placeholder-muted focus:outline-none focus:border-primary transition-colors;
+}
+.card {
+  @apply bg-card border border-border rounded-xl p-6;
+}
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}

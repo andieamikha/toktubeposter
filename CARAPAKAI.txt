@@ -1,0 +1,7 @@
+Cara pakai:
+
+Copy seluruh folder TIKTOK ke komputer/USB manapun (Windows)
+Pertama kali: double-click install.bat (atau langsung start.bat yang akan auto-install)
+Selanjutnya: double-click start.bat → otomatis buka backend + frontend
+Akses di http://localhost:3000
+Untuk berhenti: double-click stop.bat

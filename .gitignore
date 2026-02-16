@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+.next/
+
+# Portable Node.js (too large for git)
+node18/
+node20/
+
+# Data files (database, videos, browser profiles)
+backend/data/
+frontend/.next/
