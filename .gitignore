@@ -10,6 +10,8 @@ coverage/
 # Portable Node.js (too large for git)
 node18/
 node20/
+node18.zip
+node20.zip
 
 # Data files (database, videos, browser profiles)
 backend/data/
