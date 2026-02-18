@@ -2,10 +2,24 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { google, youtube_v3 } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs';
 import { YoutubeAccount } from '../youtube-accounts/entities/youtube-account.entity';
+
+// Lazy-load googleapis to avoid slow TypeScript compilation and crashes if not installed
+let _google: any = null;
+async function getGoogle(): Promise<any> {
+  if (!_google) {
+    try {
+      const mod = await import('googleapis');
+      _google = mod.google;
+    } catch {
+      throw new BadRequestException(
+        'Package "googleapis" belum terinstall. Jalankan: cd backend && npm install googleapis google-auth-library',
+      );
+    }
+  }
+  return _google;
+}
 
 @Injectable()
 export class YoutubeApiService {
@@ -37,21 +51,22 @@ export class YoutubeApiService {
   /**
    * Create an OAuth2 client
    */
-  private createOAuth2Client(): OAuth2Client {
+  private async createOAuth2Client(): Promise<any> {
+    const google = await getGoogle();
     return new google.auth.OAuth2(this.clientId, this.clientSecret, this.redirectUri);
   }
 
   /**
    * Create an authenticated OAuth2 client for a specific account
    */
-  private async getAuthenticatedClient(account: YoutubeAccount): Promise<OAuth2Client> {
+  private async getAuthenticatedClient(account: YoutubeAccount): Promise<any> {
     if (!account.isApiConnected || !account.youtubeAccessToken) {
       throw new BadRequestException(
         `Akun ${account.channelName} belum terhubung ke YouTube API. Hubungkan terlebih dahulu.`,
       );
     }
 
-    const oauth2Client = this.createOAuth2Client();
+    const oauth2Client = await this.createOAuth2Client();
     oauth2Client.setCredentials({
       access_token: account.youtubeAccessToken,
       refresh_token: account.youtubeRefreshToken,
@@ -113,7 +128,7 @@ export class YoutubeApiService {
   /**
    * Generate OAuth authorization URL
    */
-  getAuthUrl(accountId: string): string {
+  async getAuthUrl(accountId: string): Promise<string> {
     if (!this.isConfigured()) {
       throw new BadRequestException({
         code: 'YOUTUBE_API_NOT_CONFIGURED',
@@ -121,7 +136,7 @@ export class YoutubeApiService {
       });
     }
 
-    const oauth2Client = this.createOAuth2Client();
+    const oauth2Client = await this.createOAuth2Client();
     const state = Buffer.from(JSON.stringify({ accountId })).toString('base64url');
 
     const url = oauth2Client.generateAuthUrl({
@@ -148,7 +163,7 @@ export class YoutubeApiService {
     scope: string;
   }> {
     try {
-      const oauth2Client = this.createOAuth2Client();
+      const oauth2Client = await this.createOAuth2Client();
       const { tokens } = await oauth2Client.getToken(code);
 
       if (!tokens.access_token) {
@@ -211,6 +226,7 @@ export class YoutubeApiService {
     categoryId: string = '22', // People & Blogs
   ): Promise<{ videoId: string; videoUrl: string }> {
     const oauth2Client = await this.getAuthenticatedClient(account);
+    const google = await getGoogle();
     const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 
     const fileSize = fs.statSync(filePath).size;
@@ -285,6 +301,7 @@ export class YoutubeApiService {
     videoCount: string;
   }> {
     const oauth2Client = await this.getAuthenticatedClient(account);
+    const google = await getGoogle();
     const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 
     try {

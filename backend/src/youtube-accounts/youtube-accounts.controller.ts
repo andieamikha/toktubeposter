@@ -64,8 +64,8 @@ export class YoutubeAccountsController {
    */
   @Get(':id/api/auth-url')
   @Roles(UserRole.ADMIN)
-  getAuthUrl(@Param('id') id: string) {
-    const url = this.youtubeApiService.getAuthUrl(id);
+  async getAuthUrl(@Param('id') id: string) {
+    const url = await this.youtubeApiService.getAuthUrl(id);
     return { url };
   }
 
