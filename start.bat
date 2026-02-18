@@ -48,11 +48,23 @@ if not exist "%ROOT%\frontend\node_modules" (
     echo.
 )
 
-:: Copy .env to backend if not exists
+:: Ensure backend/.env exists
 if not exist "%ROOT%\backend\.env" (
     if exist "%ROOT%\.env" (
+        echo [INFO] Copying root .env to backend/.env
         copy "%ROOT%\.env" "%ROOT%\backend\.env" >nul
+    ) else if exist "%ROOT%\backend\.env.example" (
+        echo [INFO] Creating backend/.env from .env.example
+        copy "%ROOT%\backend\.env.example" "%ROOT%\backend\.env" >nul
+        echo [INFO] backend/.env created. Edit it later to add API keys.
+    ) else (
+        echo [WARN] No .env or .env.example found! Backend may not start correctly.
     )
+)
+
+:: Ensure backend/data directory exists
+if not exist "%ROOT%\backend\data" (
+    mkdir "%ROOT%\backend\data"
 )
 
 echo [1/2] Starting Backend (port 3001)...

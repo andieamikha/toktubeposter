@@ -146,19 +146,53 @@ export class AuthService {
   }
 
   async seedAdmin() {
+    const defaultEmail = 'admin@tiktokmanager.com';
+    const defaultPassword = 'Admin123!';
+
+    // Cek apakah ada user admin sama sekali
     const existingAdmin = await this.usersRepository.findOne({
       where: { role: 'admin' as any },
     });
+
     if (!existingAdmin) {
-      const hash = await bcrypt.hash('Admin123!', 12);
+      // Belum ada admin → buat baru
+      const hash = await bcrypt.hash(defaultPassword, 12);
       await this.usersRepository.save({
-        email: 'admin@tiktokmanager.com',
+        email: defaultEmail,
         passwordHash: hash,
         fullName: 'Administrator',
         role: UserRole.ADMIN,
         isActive: true,
       });
-      this.logger.log('Admin seed created: admin@tiktokmanager.com / Admin123!');
+      this.logger.log(`Admin seed created: ${defaultEmail} / ${defaultPassword}`);
+      return;
+    }
+
+    // Admin sudah ada → pastikan email default ada dan aktif
+    const defaultAdmin = await this.usersRepository.findOne({
+      where: { email: defaultEmail },
+    });
+
+    if (!defaultAdmin) {
+      // Email default tidak ada (mungkin dihapus/diubah) → buat ulang
+      const hash = await bcrypt.hash(defaultPassword, 12);
+      await this.usersRepository.save({
+        email: defaultEmail,
+        passwordHash: hash,
+        fullName: 'Administrator',
+        role: UserRole.ADMIN,
+        isActive: true,
+      });
+      this.logger.log(`Admin seed re-created: ${defaultEmail} / ${defaultPassword}`);
+    } else if (!defaultAdmin.isActive) {
+      // Admin ada tapi non-aktif → aktifkan kembali dan reset password
+      const hash = await bcrypt.hash(defaultPassword, 12);
+      defaultAdmin.isActive = true;
+      defaultAdmin.passwordHash = hash;
+      await this.usersRepository.save(defaultAdmin);
+      this.logger.log(`Admin seed reactivated & password reset: ${defaultEmail} / ${defaultPassword}`);
+    } else {
+      this.logger.log(`Admin exists: ${defaultAdmin.email} (active)`);
     }
   }
 }
