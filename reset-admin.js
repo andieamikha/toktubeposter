@@ -22,7 +22,7 @@ async function main() {
   }
 
   // Load dependencies from backend's node_modules
-  const bcrypt = require(path.join(__dirname, 'backend', 'node_modules', 'bcrypt'));
+  const bcrypt = require(path.join(__dirname, 'backend', 'node_modules', 'bcryptjs'));
   const initSqlJs = require(path.join(__dirname, 'backend', 'node_modules', 'sql.js'));
   
   const SQL = await initSqlJs();

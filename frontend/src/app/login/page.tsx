@@ -27,8 +27,9 @@ export default function LoginPage() {
       setAuth(data.data.user, data.data.access_token, data.data.refresh_token);
       router.push('/dashboard');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr.response?.data?.message || 'Login gagal');
+      const axiosErr = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
+      const msg = axiosErr.response?.data?.error?.message || axiosErr.response?.data?.message;
+      setError(msg || 'Login gagal. Pastikan backend sudah berjalan di port 3001.');
     } finally {
       setLoading(false);
     }
