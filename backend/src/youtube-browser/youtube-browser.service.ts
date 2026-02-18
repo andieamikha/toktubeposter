@@ -1,10 +1,24 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as puppeteer from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
 import { YoutubeAccount } from '../youtube-accounts/entities/youtube-account.entity';
+
+// Lazy-load puppeteer to avoid crash if Chromium not downloaded
+let puppeteer: any = null;
+async function getPuppeteer() {
+  if (!puppeteer) {
+    try {
+      puppeteer = await import('puppeteer');
+    } catch (e: any) {
+      throw new BadRequestException(
+        'Puppeteer/Chromium tidak tersedia. Install dengan: cd backend && npm install puppeteer'
+      );
+    }
+  }
+  return puppeteer;
+}
 
 const YOUTUBE_LOGIN_URL = 'https://accounts.google.com/signin';
 const YOUTUBE_UPLOAD_URL = 'https://studio.youtube.com';
@@ -27,7 +41,7 @@ export class YoutubeBrowserService {
     }
   }
 
-  private async takeScreenshot(page: puppeteer.Page, accountId: string, step: string): Promise<string> {
+  private async takeScreenshot(page: any, accountId: string, step: string): Promise<string> {
     const filename = `${accountId}_${step}_${Date.now()}.png`;
     const filepath = path.join(SCREENSHOTS_DIR, filename);
     try {
@@ -47,9 +61,9 @@ export class YoutubeBrowserService {
     return dir;
   }
 
-  private async launchBrowser(accountId: string, headless = true): Promise<puppeteer.Browser> {
+  private async launchBrowser(accountId: string, headless = true): Promise<any> {
     const profileDir = this.getProfileDir(accountId);
-    return puppeteer.launch({
+    const pup = await getPuppeteer(); return pup.launch({
       headless: headless ? true : false,
       userDataDir: profileDir,
       args: [
@@ -62,7 +76,7 @@ export class YoutubeBrowserService {
     });
   }
 
-  private async applyStealthToPage(page: puppeteer.Page): Promise<void> {
+  private async applyStealthToPage(page: any): Promise<void> {
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
@@ -109,7 +123,7 @@ export class YoutubeBrowserService {
       throw new BadRequestException('Email atau password YouTube belum diisi.');
     }
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -188,7 +202,7 @@ export class YoutubeBrowserService {
       throw new BadRequestException('Format cookies tidak valid. Harus berupa JSON array.');
     }
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -263,7 +277,7 @@ export class YoutubeBrowserService {
     const account = await this.accountsRepo.findOne({ where: { id: accountId } });
     if (!account) throw new BadRequestException('Akun YouTube tidak ditemukan.');
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -323,7 +337,7 @@ export class YoutubeBrowserService {
       throw new BadRequestException(`Akun ${account.channelName} belum login browser.`);
     }
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -433,7 +447,7 @@ export class YoutubeBrowserService {
       // Upload file - wait for file input to appear (it loads dynamically after dialog opens)
       this.logger.log(`[${account.channelName}] Waiting for file input to appear...`);
       
-      let fileInput: puppeteer.ElementHandle<HTMLInputElement> | null = null;
+      let fileInput: any | null = null;
       
       // Wait up to 15 seconds for the file input to appear
       for (let attempt = 0; attempt < 15; attempt++) {
@@ -1032,7 +1046,7 @@ export class YoutubeBrowserService {
   /**
    * Wait for YouTube video processing (upload progress)
    */
-  private async waitForVideoProcessing(page: puppeteer.Page, accountId: string): Promise<{ ready: boolean; error?: string }> {
+  private async waitForVideoProcessing(page: any, accountId: string): Promise<{ ready: boolean; error?: string }> {
     const maxWait = 10 * 60 * 1000; // 10 minutes max
     const startTime = Date.now();
     let lastProgress = '';

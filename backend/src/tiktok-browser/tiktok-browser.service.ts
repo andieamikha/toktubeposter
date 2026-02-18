@@ -1,10 +1,24 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as puppeteer from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
 import { TiktokAccount } from '../tiktok-accounts/entities/tiktok-account.entity';
+
+// Lazy-load puppeteer to avoid crash if Chromium not downloaded
+let puppeteer: any = null;
+async function getPuppeteer() {
+  if (!puppeteer) {
+    try {
+      puppeteer = await import('puppeteer');
+    } catch (e: any) {
+      throw new BadRequestException(
+        'Puppeteer/Chromium tidak tersedia. Install dengan: cd backend && npm install puppeteer'
+      );
+    }
+  }
+  return puppeteer;
+}
 
 const TIKTOK_LOGIN_URL = 'https://www.tiktok.com/login/phone-or-email/email';
 const TIKTOK_UPLOAD_URL = 'https://www.tiktok.com/tiktokstudio/upload';
@@ -32,7 +46,7 @@ export class TiktokBrowserService {
   /**
    * Take a debug screenshot
    */
-  private async takeScreenshot(page: puppeteer.Page, accountId: string, step: string): Promise<string> {
+  private async takeScreenshot(page: any, accountId: string, step: string): Promise<string> {
     const filename = `${accountId}_${step}_${Date.now()}.png`;
     const filepath = path.join(SCREENSHOTS_DIR, filename);
     try {
@@ -58,9 +72,9 @@ export class TiktokBrowserService {
   /**
    * Launch browser with optional account-specific profile
    */
-  private async launchBrowser(accountId: string, headless = true): Promise<puppeteer.Browser> {
+  private async launchBrowser(accountId: string, headless = true): Promise<any> {
     const profileDir = this.getProfileDir(accountId);
-    return puppeteer.launch({
+    const pup = await getPuppeteer(); return pup.launch({
       headless: headless ? true : false,
       userDataDir: profileDir,
       args: [
@@ -76,7 +90,7 @@ export class TiktokBrowserService {
   /**
    * Apply stealth techniques to a page
    */
-  private async applyStealthToPage(page: puppeteer.Page): Promise<void> {
+  private async applyStealthToPage(page: any): Promise<void> {
     // Override navigator.webdriver
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
@@ -101,7 +115,7 @@ export class TiktokBrowserService {
       throw new BadRequestException('Username atau password TikTok belum diisi.');
     }
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -201,7 +215,7 @@ export class TiktokBrowserService {
       throw new BadRequestException(`Format cookies tidak valid: ${e.message}`);
     }
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -273,7 +287,7 @@ export class TiktokBrowserService {
     const account = await this.accountsRepo.findOne({ where: { id: accountId } });
     if (!account) throw new BadRequestException('Akun tidak ditemukan.');
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -324,7 +338,7 @@ export class TiktokBrowserService {
       throw new BadRequestException('File video tidak ditemukan.');
     }
 
-    let browser: puppeteer.Browser | null = null;
+    let browser: any | null = null;
     try {
       browser = await this.launchBrowser(accountId, true);
       const page = await browser.newPage();
@@ -474,7 +488,7 @@ export class TiktokBrowserService {
   /**
    * Fill caption using multiple strategies
    */
-  private async fillCaption(page: puppeteer.Page, caption: string): Promise<boolean> {
+  private async fillCaption(page: any, caption: string): Promise<boolean> {
     const strategies = [
       // Strategy 1: contenteditable div
       async () => {
@@ -547,7 +561,7 @@ export class TiktokBrowserService {
   /**
    * Wait for video processing to complete (progress bar)
    */
-  private async waitForVideoProcessing(page: puppeteer.Page, username: string): Promise<void> {
+  private async waitForVideoProcessing(page: any, username: string): Promise<void> {
     const maxWait = 90000; // 90 seconds
     const interval = 3000;
     let elapsed = 0;
@@ -586,7 +600,7 @@ export class TiktokBrowserService {
   /**
    * Click the Post/Upload button using multiple strategies
    */
-  private async clickPostButton(page: puppeteer.Page): Promise<boolean> {
+  private async clickPostButton(page: any): Promise<boolean> {
     // Strategy 1: Try CSS selectors
     const buttonSelectors = [
       '[class*="post-button"]',
@@ -675,7 +689,7 @@ export class TiktokBrowserService {
   /**
    * Wait for TikTok to finish processing and posting
    */
-  private async waitForUploadComplete(page: puppeteer.Page, username: string, accountId?: string): Promise<void> {
+  private async waitForUploadComplete(page: any, username: string, accountId?: string): Promise<void> {
     const maxWaitMs = 120000; // 2 minutes
     const checkInterval = 3000;
     let elapsed = 0;
@@ -820,7 +834,7 @@ export class TiktokBrowserService {
   /**
    * Check if page shows logged-in state
    */
-  private async checkLoginStatus(page: puppeteer.Page): Promise<boolean> {
+  private async checkLoginStatus(page: any): Promise<boolean> {
     try {
       // Strategy 1: Check cookies set on the page for session tokens
       const pageCookies = await page.cookies('https://www.tiktok.com');
@@ -877,7 +891,7 @@ export class TiktokBrowserService {
   /**
    * Save cookies to database
    */
-  private async saveCookies(accountId: string, cookies: puppeteer.Protocol.Network.Cookie[]): Promise<void> {
+  private async saveCookies(accountId: string, cookies: any[]): Promise<void> {
     const cookiesJson = JSON.stringify(cookies);
     await this.accountsRepo.update(accountId, {
       tiktokCookies: cookiesJson,
@@ -889,7 +903,7 @@ export class TiktokBrowserService {
   /**
    * Load cookies from database and set on page
    */
-  private async loadCookies(accountId: string, page: puppeteer.Page): Promise<void> {
+  private async loadCookies(accountId: string, page: any): Promise<void> {
     const account = await this.accountsRepo.findOne({
       where: { id: accountId },
       select: ['id', 'tiktokCookies'],
